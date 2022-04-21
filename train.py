@@ -22,6 +22,8 @@ parser.add_argument('--patch-size', type=int, default=64,
         help='size of the sliding window for patch extraction (default 64)')
 parser.add_argument('--patch-stride', type=int, default=64,
         help='stride of the sliding window for patch extraction (default 64)')
+parser.add_argument('--val-split', type=float, default=0.8,
+        help='validation split (default 0.8)')
 
 device = 'cuda' if torch.cuda.is_available() else 'cpu'
 
@@ -58,7 +60,7 @@ def validate(dataloader, model, loss_fn):
 def main():
     print(f'Using {device} device') 
     args = parser.parse_args()
-    
+
     train_data = ImgPatches(
             root_dir = args.train_dir,
             patch_size = args.patch_size,
@@ -74,16 +76,18 @@ def main():
             patch_transform = AddRandomScatter(51,(15,20),(0.5,0.7),'uniform')
     )
     
+    n_train = int(args.val_split*len(train_data))
+    
     train_loader = DataLoader(
-            ConcatDatasets(train_data[:1024],
-                train_data_noisy[:1024]),
+            ConcatDatasets(train_data[:n_train],
+                train_data_noisy[:n_train]),
             batch_size=args.batch_size,
             shuffle = True,
     )
     
     validation_loader = DataLoader(
-            ConcatDatasets(train_data[1024:1124], 
-                train_data_noisy[1024:1124]),
+            ConcatDatasets(train_data[n_train:], 
+                train_data_noisy[n_train]),
             batch_size=args.batch_size,
             shuffle = True,
     )

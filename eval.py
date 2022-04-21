@@ -45,8 +45,7 @@ def main():
     )
 
     test_loader = DataLoader(
-            ConcatDatasets(test_data[:10], 
-                test_data_noisy[:10]),
+            ConcatDatasets(test_data, test_data_noisy),
             batch_size=1,
             shuffle = False,
     )
