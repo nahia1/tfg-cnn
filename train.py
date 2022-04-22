@@ -87,7 +87,7 @@ def main():
     
     validation_loader = DataLoader(
             ConcatDatasets(train_data[n_train:], 
-                train_data_noisy[n_train]),
+                train_data_noisy[n_train:]),
             batch_size=args.batch_size,
             shuffle = True,
     )
