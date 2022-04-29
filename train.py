@@ -16,6 +16,8 @@ parser.add_argument('train_dir', type=str,
         help='directory containing the training dataset')
 parser.add_argument('--epochs', type=int, default=10, 
         help='number of training epochs (default 10)')
+parser.add_argument('--learning-rate', type=float, default=1e-3, 
+        help='initial learning rate (default 1e-3)')
 parser.add_argument('--batch-size', type=int, default=64,
         help='size of the mini-batches (default 64)')
 parser.add_argument('--patch-size', type=int, default=64,
@@ -92,9 +94,15 @@ def main():
             shuffle = True,
     )
 
-    model = CNN().to(device)
+    model = CNN()
+    if torch.cuda.device_count() > 1:
+        print('Using', torch.cuda.device_count(), 'GPUs')
+        model = nn.DataParallel(model)
+    model.to(device)
+
     loss_fn = L2_SSIMLoss(a=0.8)
-    optimiser = torch.optim.Adam(model.parameters(), lr=1e-3, weight_decay=1e-5)
+    optimiser = torch.optim.Adam(model.parameters(), 
+            lr=args.learning_rate, weight_decay=1e-5)
     scheduler = ReduceLROnPlateau(optimiser, 'min')
     
     for t in range(args.epochs):
