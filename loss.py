@@ -28,7 +28,7 @@ class SSIMLoss(nn.Module):
         self.kernel_sigma = kernel_sigma
         self.reduction = reduction
     def forward(self, input, target):
-        loss = (1 - ssim(input, target, self.kernel_size, self.kernel_sigma))/2
+        loss = 1 - ssim(input, target, self.kernel_size, self.kernel_sigma)
 
         if self.reduction == 'mean':
             loss = torch.mean(loss)
@@ -49,7 +49,7 @@ class L2_SSIMLoss(nn.Module):
 
     def forward(self, input, target):
         l2_loss = (input - target).pow(2)
-        ssim_loss = (1 - ssim(input, target, self.kernel_size, self.kernel_sigma))/2
+        ssim_loss = 1 - ssim(input, target, self.kernel_size, self.kernel_sigma)
         loss = self.a*l2_loss + (1-self.a)*ssim_loss
 
         if self.reduction == 'mean':

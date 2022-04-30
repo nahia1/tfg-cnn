@@ -5,7 +5,7 @@ from torch.optim.lr_scheduler import ReduceLROnPlateau
 from torchvision import transforms
 
 from dataset import ImgPatches, ConcatDatasets
-from loss import L2_SSIMLoss, SSIMLoss
+from loss import L2_SSIMLoss
 from transforms import AddRandomScatter
 from models import CNN
 
@@ -63,14 +63,14 @@ def main():
     print(f'Using {device} device') 
     args = parser.parse_args()
 
-    train_data = ImgPatches(
+    data = ImgPatches(
             root_dir = args.train_dir,
             patch_size = args.patch_size,
             stride = args.patch_stride,
             transform = transforms.CenterCrop(900),
     )
     
-    train_data_noisy = ImgPatches(
+    data_noisy = ImgPatches(
             root_dir = args.train_dir,
             patch_size = args.patch_size,
             stride = args.patch_stride,
@@ -78,18 +78,22 @@ def main():
             patch_transform = AddRandomScatter(51,(15,20),(0.5,0.7),'uniform')
     )
     
-    n_train = int(args.val_split*len(train_data))
-    
+    n_train = int(args.val_split*len(data))
+    n_val = len(data) - n_train
+
+    train_data, validation_data = torch.utils.data.random_split(
+            ConcatDatasets(data, data_noisy),
+            [n_train, n_val]
+    )
+
     train_loader = DataLoader(
-            ConcatDatasets(train_data[:n_train],
-                train_data_noisy[:n_train]),
+            train_data,
             batch_size=args.batch_size,
             shuffle = True,
     )
     
     validation_loader = DataLoader(
-            ConcatDatasets(train_data[n_train:], 
-                train_data_noisy[n_train:]),
+            validation_data,
             batch_size=args.batch_size,
             shuffle = True,
     )
@@ -100,7 +104,7 @@ def main():
         model = nn.DataParallel(model)
     model.to(device)
 
-    loss_fn = L2_SSIMLoss(a=0.8)
+    loss_fn = L2_SSIMLoss(a=0.2)
     optimiser = torch.optim.Adam(model.parameters(), 
             lr=args.learning_rate, weight_decay=1e-5)
     scheduler = ReduceLROnPlateau(optimiser, 'min')

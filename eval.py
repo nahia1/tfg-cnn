@@ -51,24 +51,31 @@ def main():
     )
 
     model = CNN()
-    model.load_state_dict(torch.load(args.model))
+    model.load_state_dict(torch.load(args.model,
+        map_location=torch.device('cpu')))
     model.eval()
 
     if not os.path.exists(args.out_dir):
         os.makedirs(args.out_dir)
 
+    metrics = {'ssim': []}
     with torch.no_grad():
         for batch, (true, noisy) in enumerate(test_loader):
             pred = model(noisy).detach()
-            ssim1 = torch.mean(ssim(true,noisy,11,1.5))
-            ssim2 = torch.mean(ssim(true,pred,11,1.5))
+            ssim1 = torch.mean(ssim(true,noisy, 11, 1.5))
+            ssim2 = torch.mean(ssim(true,pred, 11, 1.5))
             print(f'Test {batch}; SSIM: {ssim1:>7f} {ssim2:>7f}')
+            metrics['ssim'].append([ssim1, ssim2])
 
             pred = pred.squeeze().numpy()*255
             noisy = noisy.squeeze().numpy()*255
             true = true.squeeze().numpy()*255
             output = np.concatenate((true, noisy, pred), axis=1)
             cv2.imwrite(f'results/pred{batch:>03d}.png', output)
+
+    improvement = [x2-x1 for x1, x2 in metrics['ssim']]
+    print(f'Average ssim improvement: {np.mean(improvement):>7f}')
+            
 
 if __name__ == '__main__':
     main()
