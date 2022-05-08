@@ -33,14 +33,12 @@ def main():
             root_dir = args.test_dir,
             patch_size = args.patch_size,
             stride = args.patch_stride,
-            transform = transforms.CenterCrop(900),
     )
     
     test_data_noisy = ImgPatches(
             root_dir = args.test_dir,
             patch_size = args.patch_size,
             stride = args.patch_stride,
-            transform = transforms.CenterCrop(900),
             patch_transform = AddRandomScatter(51,(15,20),(0.5,0.7),'uniform')
     )
 
@@ -51,6 +49,8 @@ def main():
     )
 
     model = CNN()
+    
+    #model = nn.DataParallel(model)
     model.load_state_dict(torch.load(args.model,
         map_location=torch.device('cpu')))
     model.eval()
@@ -71,7 +71,8 @@ def main():
             noisy = noisy.squeeze().numpy()*255
             true = true.squeeze().numpy()*255
             output = np.concatenate((true, noisy, pred), axis=1)
-            cv2.imwrite(f'results/pred{batch:>03d}.png', output)
+            out_path = os.path.join(args.out_dir, f'pred{batch:>03d}.png')
+            cv2.imwrite(out_path, output)
 
     improvement = [x2-x1 for x1, x2 in metrics['ssim']]
     print(f'Average ssim improvement: {np.mean(improvement):>7f}')

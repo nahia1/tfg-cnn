@@ -32,11 +32,11 @@ python3 eval.py --patch-size 128 --patch-stride 64 trained.pth dataset/test
 * Middle: input (with scatter)
 * Right: output/prediction (scatter corrected)
 
-![example 1](examples/pred192.png)
+![example 1](examples/pred000.png)
 
-![example 2](examples/pred210.png)
+![example 2](examples/pred001.png)
 
-![example 3](examples/pred263.png)
+![example 3](examples/pred002.png)
 
-![example 4](examples/pred268.png)
+![example 4](examples/pred003.png)
 
