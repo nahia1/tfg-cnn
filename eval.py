@@ -39,7 +39,7 @@ def main():
             root_dir = args.test_dir,
             patch_size = args.patch_size,
             stride = args.patch_stride,
-            patch_transform = AddRandomScatter(51,(15,20),(0.5,0.7),'uniform')
+            patch_transform = AddRandomScatter(101,(25,35),(0.4,0.8),'uniform')
     )
 
     test_loader = DataLoader(
@@ -50,7 +50,7 @@ def main():
 
     model = CNN()
     
-    #model = nn.DataParallel(model)
+    model = nn.DataParallel(model)
     model.load_state_dict(torch.load(args.model,
         map_location=torch.device('cpu')))
     model.eval()
@@ -76,7 +76,6 @@ def main():
 
     improvement = [x2-x1 for x1, x2 in metrics['ssim']]
     print(f'Average ssim improvement: {np.mean(improvement):>7f}')
-            
 
 if __name__ == '__main__':
     main()

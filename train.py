@@ -4,7 +4,7 @@ from torch.utils.data import DataLoader
 from torch.optim.lr_scheduler import ReduceLROnPlateau
 from torchvision import transforms
 
-from dataset import ImgPatches, ConcatDatasets
+from dataset import ImgPatches, ConcatDatasets, LazyDataset
 from loss import L2_SSIMLoss
 from transforms import AddRandomScatter
 from models import CNN
@@ -42,7 +42,8 @@ def train(dataloader, model, loss_fn, optimiser):
         optimiser.zero_grad()
         loss.backward()
         optimiser.step()
-
+        torch.cuda.empty_cache()
+        
         loss, current = loss.item(), (batch + 1) * len(data_true)
         print(f'loss: {loss:>7f}  [{current:>5d}/{size:>5d}]')
 
@@ -67,16 +68,23 @@ def main():
             root_dir = args.train_dir,
             patch_size = args.patch_size,
             stride = args.patch_stride,
-            transform = transforms.CenterCrop(900),
     )
     
     data_noisy = ImgPatches(
             root_dir = args.train_dir,
             patch_size = args.patch_size,
             stride = args.patch_stride,
-            transform = transforms.CenterCrop(900),
-            patch_transform = AddRandomScatter(51,(15,20),(0.5,0.7),'uniform')
+            patch_transform = AddRandomScatter(71,(15,25),(0.4,0.8),'uniform')
     )
+
+    #data = LazyDataset(
+    #        root_dir = args.train_dir,
+    #)
+    #
+    #data_noisy = LazyDataset(
+    #        root_dir = args.train_dir,
+    #        transform = AddRandomScatter(101,(25,35),(0.4,0.8),'uniform')
+    #)
     
     n_train = int(args.val_split*len(data))
     n_val = len(data) - n_train
@@ -89,25 +97,24 @@ def main():
     train_loader = DataLoader(
             train_data,
             batch_size=args.batch_size,
-            shuffle = True,
+            num_workers = 12,
     )
     
     validation_loader = DataLoader(
             validation_data,
             batch_size=args.batch_size,
-            shuffle = True,
+            num_workers = 12,
     )
 
-    model = CNN()
+    model = CNN().to(device)
     if torch.cuda.device_count() > 1:
-        print('Using', torch.cuda.device_count(), 'GPUs')
-        model = nn.DataParallel(model)
-    model.to(device)
+       print('Using', torch.cuda.device_count(), 'GPUs')
+       model = nn.DataParallel(model)
 
-    loss_fn = L2_SSIMLoss(a=0.2)
+    loss_fn = L2_SSIMLoss(a=0.2).to(device)
     optimiser = torch.optim.Adam(model.parameters(), 
             lr=args.learning_rate, weight_decay=1e-5)
-    scheduler = ReduceLROnPlateau(optimiser, 'min')
+    scheduler = ReduceLROnPlateau(optimiser, 'min', patience = 5, min_lr=1e-5)
     
     for t in range(args.epochs):
         print(f'Epoch {t+1}\n-------------------------------')

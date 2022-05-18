@@ -1,9 +1,9 @@
 import torch
 from torch.utils.data import Dataset
-from torchvision.io import read_image, ImageReadMode
 
 import os
 import glob
+import cv2
 
 def img2patches(img, kernel, stride):
     """
@@ -52,19 +52,52 @@ def load_dataset(path, ext, patch_size, stride, transform=None):
     imgs = glob.glob(os.path.join(path,"*.%s"%ext))
     data = []
 
-    for i, img_path in enumerate(imgs):
-        img = read_image(img_path, ImageReadMode.GRAY).float()/255
-        
+    for path in imgs:
+        img = cv2.imread(path, cv2.IMREAD_GRAYSCALE)
+        if img is None:
+            raise OSError(f'Could not open image {path}')
+        img = torch.tensor(img, dtype=torch.float).unsqueeze(0)/255
         if transform:
             img = transform(img)
-
         patches = img2patches(img, patch_size, stride)
         data.append(patches)
     data_torch = torch.Tensor(len(data), *data[0].shape)
     torch.cat(data, out=data_torch)
 
     return data_torch
-        
+
+class LazyDataset(Dataset):
+    def __init__(self, root_dir, ext='png', transform=None):
+        """
+        Dataset class, loads images lazily.
+
+        [TODO:description]
+
+        Parameters
+        ----------
+        root_dir : string
+            Path of the directory containing the images.
+        ext : string
+            File extension of the images.
+        transform : Transform
+            Transform to apply to images.
+        """
+        self.paths = glob.glob(os.path.join(root_dir,"*.%s"%ext))
+        self.transform = transform
+
+    def __len__(self):
+        return len(self.paths)
+
+    def __getitem__(self, idx):
+        path = self.paths[idx]
+        img = cv2.imread(path, cv2.IMREAD_GRAYSCALE)
+        if img is None:
+            raise OSError(f'Could not open image {path}')
+        img = torch.tensor(img, dtype=torch.float).unsqueeze(0)/255
+        if self.transform:
+            img = self.transform(img)
+        return img
+
 class ImgPatches(Dataset):
     def __init__(self, root_dir, patch_size, stride=1, transform=None,
             patch_transform=None):
